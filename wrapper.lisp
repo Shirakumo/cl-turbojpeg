@@ -27,6 +27,10 @@
   (unless (cffi:foreign-library-loaded-p 'turbo:libturbojpeg)
     (cffi:load-foreign-library 'turbo:libturbojpeg)))
 
+(defmethod free (ptr)
+  (check-type ptr cffi:foreign-pointer)
+  (turbo:free ptr))
+
 (defclass jpeg ()
   ((handle :initarg :handle :initform NIL :accessor handle)))
 
@@ -198,7 +202,7 @@
   (unless pitch
     (setf pitch (* (turbo:pixel-size pixel-format) (width jpeg))))
   (unless buffer
-    (setf buffer (cffi:foreign-alloc :uint8 :count (* pitch (height jpeg)))))
+    (setf buffer (turbo:alloc (* pitch (height jpeg)))))
   (let ((result (ecase bit-depth
                   (8 (turbo:decompress (handle jpeg) ptr size buffer pitch pixel-format))
                   (12 (turbo:decompress/12 (handle jpeg) ptr size buffer pitch pixel-format))

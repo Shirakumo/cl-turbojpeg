@@ -68,6 +68,7 @@
 
 (defpackage #:org.shirakumo.fraf.jpeg.cffi
   (:use #:cl)
+  (:shadow #:abort)
   (:export
    #:libjpeg
    #:dct-size

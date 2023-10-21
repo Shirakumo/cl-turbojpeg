@@ -1,3 +1,3 @@
-(in-package #:org.shirakumo.fraf.glfw)
+(in-package #:org.shirakumo.fraf.turbojpeg)
 
 

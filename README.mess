@@ -1,0 +1,4 @@
+# About cl-turbojpeg
+This is an up-to-date bindings library for "libjpeg-turbo"(https://libjpeg-turbo.org), providing a fast way to read, write, and transform JPEG images.
+
+Unlike the existing "jpeg-turbo wrapper"(https://github.com/shamazmazum/jpeg-turbo/) this project is up-to-date with upstream, exposes the full API, and ships precompiled binaries, avoiding the requirement for a local copy and a C compiler to grovel with.

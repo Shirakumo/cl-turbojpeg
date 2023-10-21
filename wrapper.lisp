@@ -274,6 +274,28 @@
   (cffi:with-pointer-to-vector-data (ptr source)
     (apply #'transform-image source ptr operation jpeg :destination-size (or destination-size (length source)) args)))
 
+(defmethod transform-image (source (destination pathname) operation (jpeg transformer) &rest args &key &allow-other-keys)
+  (multiple-value-bind (buf size) (apply #'transform-image source NIL operation jpeg args)
+    (unwind-protect
+         ;; Use C functions to avoid having to copy the memory buffer to a vector for output.
+         (let ((file (cffi:foreign-funcall "fopen" :string (uiop:native-namestring destination) :string "wb" :pointer)))
+           (unwind-protect
+                (progn
+                  (when (cffi:null-pointer-p file)
+                    (error 'jpeg-error :jpeg jpeg :message "Failed to open file to write to."))
+                  (when (< (cffi:foreign-funcall "fwrite" :pointer buf :size size :size 1 :pointer file :int) 1)
+                    (error 'jpeg-error :jpeg jpeg :message "Failed to write to file."))
+                  destination)
+             (cffi:foreign-funcall "fclose" :pointer file :int)))
+      (turbo:free buf))))
+
+(defmethod transform-image ((source pathname) destination operation (jpeg transformer) &rest args &key &allow-other-keys)
+  (let (vec)
+    (with-open-file (stream source :element-type '(unsigned-byte 8))
+      (setf vec (make-array (file-length stream) :element-type '(unsigned-byte 8)))
+      (read-sequence vec stream))
+    (apply #'transform-image vec destination operation jpeg args)))
+
 (defmethod transform-image (source destination operation (jpeg (eql T)) &rest args &key &allow-other-keys)
   (let ((jpeg (make-instance 'transformer)))
     (unwind-protect (apply #'transform-image source destination operation jpeg args)

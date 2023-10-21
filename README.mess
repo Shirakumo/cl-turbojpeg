@@ -2,3 +2,16 @@
 This is an up-to-date bindings library for "libjpeg-turbo"(https://libjpeg-turbo.org), providing a fast way to read, write, and transform JPEG images.
 
 Unlike the existing "jpeg-turbo wrapper"(https://github.com/shamazmazum/jpeg-turbo/) this project is up-to-date with upstream, exposes the full API, and ships precompiled binaries, avoiding the requirement for a local copy and a C compiler to grovel with.
+
+## How To
+Most of the library should be self-explanatory through the functions ``load-image``, ``save-image``, and ``transform-image``. Nevertheless, a simple example:
+
+:: common lisp
+(org.shirakumo.fraf.turbojpeg:load-image "whatever.jpg" T)
+::
+
+For finer control you can create the respective ``decompressor``, ``compressor``, and ``transformer`` instances yourself and pass the desired initargs, then call the same function with them instead of ``T``. When you are done with the object, clean it up again via ``free``.
+
+The library supports pathnames, vectors, and pointers for source and destination. When passing vectors, it uses ``cffi:with-pointer-to-vector-data`` to access the contents, so please see the respective documentation for restrictions thereof.
+
+You can also directly access the underlying jpeg-turbo C API via the ``org.shirakumo.fraf.turbojpeg.cffi`` package, and the simulated libjpeg API via the ``org.shirakumo.fraf.jpeg.cffi`` package. In the latter case you'll have to first ensure you load the ``org.shirakumo.fraf.jpeg.cffi:libjpeg`` library before using it.

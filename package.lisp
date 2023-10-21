@@ -418,4 +418,17 @@
   (:local-nicknames
    (#:turbo #:org.shirakumo.fraf.turbojpeg.cffi)
    (#:jpeg #:org.shirakumo.fraf.jpeg.cffi))
-  (:export))
+  (:export
+   #:jpeg-condition
+   #:jpeg-error
+   #:jpeg-warning
+   #:init
+   #:jpeg
+   #:handle
+   #:free
+   #:compressor
+   #:save-image
+   #:decompressor
+   #:load-image
+   #:transformer
+   #:transform-image))

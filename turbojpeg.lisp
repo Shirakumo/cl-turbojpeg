@@ -209,7 +209,7 @@
 
 (cffi:defcstruct (transform :conc-name transform-)
   (region (:struct region))
-  (operatino operation)
+  (operation operation)
   (options option)
   (data :pointer)
   (custom-filter :pointer))
@@ -394,6 +394,7 @@
   (handle :pointer)
   (jpeg-buffer :pointer)
   (jpeg-size :size)
+  (count :int)
   (dst-buffers :pointer)
   (dst-sizes :pointer)
   (transforms :pointer))

@@ -45,6 +45,7 @@
                                                             (bottom-up NIL bottom-up-p)
                                                             (progressive NIL progressive-p)
                                                             (arithmetic NIL arithmetic-p))
+  (init)
   (unless (handle jpeg)
     (let ((handle (make-handle jpeg)))
       (if (cffi:null-pointer-p handle)
@@ -230,3 +231,50 @@
   (%set-boolean no-realloc)
   (%set-property subsampling turbo:chrominance-sampling)
   (%set-property scan-limit))
+
+(defmethod transform-image (source destination operation (jpeg transformer) &key source-size
+                                                                                 destination-size
+                                                                                 perfect
+                                                                                 trim
+                                                                                 crop
+                                                                                 gray
+                                                                                 progressive
+                                                                                 copy-none
+                                                                                 arithmetic
+                                                                                 optimize)
+  (check-type source cffi:foreign-pointer)
+  (cffi:with-foreign-objects ((buf-ptr :pointer)
+                              (size-ptr :size)
+                              (transform '(:struct turbo:transform)))
+    (setf (cffi:mem-ref buf-ptr :pointer) (if destination destination (cffi:null-pointer)))
+    (setf (cffi:mem-ref size-ptr :size) (if destination destination-size 0))
+    (setf (turbo:transform-operation transform) operation)
+    (let ((options ()))
+      (when perfect (push :perfect options))
+      (when trim (push :trim options))
+      (when gray (push :gray options))
+      (when progressive (push :progressive options))
+      (when copy-none (push :copy-none options))
+      (when arithmetic (push :arithmetic options))
+      (when optimize (push :optimize options))
+      (when crop
+        (push :crop options)
+        (destructuring-bind (x y w h) crop
+          (setf (turbo:transform-region transform) (list :x x :y y :w w :h h))))
+      (setf (turbo:transform-options transform) options))
+    (check-error (turbo:transform jpeg source source-size 1 buf-ptr size-ptr transform))
+    (values (cffi:mem-ref buf-ptr :pointer)
+            (cffi:mem-ref size-ptr :size))))
+
+(defmethod transform-image ((source vector) destination operation (jpeg transformer) &rest args &key source-size &allow-other-keys)
+  (cffi:with-pointer-to-vector-data (ptr source)
+    (apply #'transform-image ptr destination operation jpeg :source-size (or source-size (length source)) args)))
+
+(defmethod transform-image (source (destination vector) operation (jpeg transformer) &rest args &key destination-size &allow-other-keys)
+  (cffi:with-pointer-to-vector-data (ptr source)
+    (apply #'transform-image source ptr operation jpeg :destination-size (or destination-size (length source)) args)))
+
+(defmethod transform-image (source destination operation (jpeg (eql T)) &rest args &key &allow-other-keys)
+  (let ((jpeg (make-instance 'transformer)))
+    (unwind-protect (apply #'transform-image source destination operation jpeg args)
+      (free jpeg))))

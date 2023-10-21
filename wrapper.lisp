@@ -173,7 +173,8 @@
 
 (defmethod load-image ((path pathname) (jpeg decompressor) &key pixel-format
                                                                 (alignment 1)
-                                                                (bit-depth 8))
+                                                                (bit-depth 8)
+                                                                buffer)
   (cffi:with-foreign-objects ((width :int)
                               (height :int)
                               (format :int))
@@ -184,13 +185,32 @@
                    (16 (turbo:load-image/16 (handle jpeg) (uiop:native-namestring path) width alignment height format)))))
       (when (cffi:null-pointer-p value)
         (report-error jpeg))
-      (values value
-              (cffi:mem-ref width :int)
-              (cffi:mem-ref height :int)
-              (cffi:mem-ref pixel-format 'turbo:pixel-format)
-              (* (turbo:pixel-size (cffi:mem-ref format 'turbo:pixel-format))
-                 (cffi:mem-ref width :int)
-                 (cffi:mem-ref height :int))))))
+      (let ((width (cffi:mem-ref width :int))
+            (height (cffi:mem-ref height :int))
+            (pixel-format (cffi:mem-ref pixel-format 'turbo:pixel-format))
+            (buffer-size (* (turbo:pixel-size (cffi:mem-ref format 'turbo:pixel-format))
+                            (cffi:mem-ref width :int)
+                            (cffi:mem-ref height :int))))
+        (labels ((transfer/ptr (buffer)
+                   (cffi:foreign-funcall "memcpy" :pointer buffer :pointer value :size buffer-size :pointer)
+                   (turbo:free value)
+                   (values buffer width height pixel-format buffer-size))
+                 (transfer/vec (vec)
+                   (cffi:with-pointer-to-vector-data (ptr vec)
+                     (cffi:foreign-funcall "memcpy" :pointer ptr :pointer value :size buffer-size :pointer)
+                     (turbo:free value)
+                     (values vec width height pixel-format buffer-size))))
+          (etypecase buffer
+            (null
+             (values value width height pixel-format buffer-size))
+            (cffi:foreign-pointer
+             (transfer/ptr buffer))
+            (vector
+             (transfer/vec buffer))
+            ((eql :vector)
+             (transfer/vec (ecase bit-depth
+                             (8 (make-array buffer-size :element-type '(unsigned-byte 8)))
+                             (16 (make-array buffer-size :element-type '(unsigned-byte 16))))))))))))
 
 (defmethod load-image (ptr (jpeg decompressor) &key (pixel-format :rgb)
                                                     pitch
@@ -201,18 +221,36 @@
   (check-error (turbo:decompress-header jpeg ptr size))
   (unless pitch
     (setf pitch (* (turbo:pixel-size pixel-format) (width jpeg))))
-  (unless buffer
-    (setf buffer (turbo:alloc (* pitch (height jpeg)))))
-  (let ((result (ecase bit-depth
-                  (8 (turbo:decompress (handle jpeg) ptr size buffer pitch pixel-format))
-                  (12 (turbo:decompress/12 (handle jpeg) ptr size buffer pitch pixel-format))
-                  (16 (turbo:decompress/16 (handle jpeg) ptr size buffer pitch pixel-format)))))
-    (test-error jpeg result)
-    (values buffer
-            (width jpeg)
-            (height jpeg)
-            pixel-format
-            (* pitch (height jpeg)))))
+  (let ((buffer-size (* pitch (height jpeg))))
+    (labels ((load-image/ptr (buffer)
+               (let ((result (ecase bit-depth
+                               (8 (turbo:decompress (handle jpeg) ptr size buffer pitch pixel-format))
+                               (12 (turbo:decompress/12 (handle jpeg) ptr size buffer pitch pixel-format))
+                               (16 (turbo:decompress/16 (handle jpeg) ptr size buffer pitch pixel-format)))))
+                 (test-error jpeg result)
+                 (values buffer
+                         (width jpeg)
+                         (height jpeg)
+                         pixel-format
+                         buffer-size)))
+             (load-image/vec (vec)
+               (cffi:with-pointer-to-vector-data (ptr vec)
+                 (multiple-value-bind (ptr w h p s) (load-image/ptr ptr)
+                   (declare (ignore ptr))
+                   (values vec w h p s)))))
+      (etypecase buffer
+        (null
+         (load-image/ptr (turbo:alloc (ceiling (* bit-depth buffer-size) 8))))
+        (cffi:foreign-pointer
+         (load-image/ptr buffer))
+        (vector
+         (load-image/vec (if (<= buffer-size (length buffer))
+                             buffer
+                             (adjust-array buffer buffer-size))))
+        ((eql :vector)
+         (load-image/vec (ecase bit-depth
+                           (8 (make-array buffer-size :element-type '(unsigned-byte 8)))
+                           (16 (make-array buffer-size :element-type '(unsigned-byte 16))))))))))
 
 (defmethod load-image ((source vector) (jpeg decompressor) &rest args &key size &allow-other-keys)
   (cffi:with-pointer-to-vector-data (ptr source)

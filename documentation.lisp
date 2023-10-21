@@ -151,7 +151,8 @@ SOURCE may be one of the following:
 
 Returns the following values:
 
-  The buffer as a CFFI:FOREIGN-POINTER
+  The buffer as a CFFI:FOREIGN-POINTER or a VECTOR
+    if :BUFFER is a VECTOR or :VECTOR
   The width
   The height
   The pixel-format
@@ -159,7 +160,11 @@ Returns the following values:
 
 You may pass your own buffer via the BUFFER keyword argument. If no
 buffer is passed, a new one will be allocated for you and you must
-call FREE on it when you are done.
+call FREE on it when you are done. If BUFFER is a VECTOR, the vector
+will be resized to fit *at least* the number of octets necessary, via
+ADJUST-ARRAY and the result of that is returned. If BUFFER is the
+keyword :VECTOR, a fresh vector that fits exactly to the image data is
+returned.
 
 JPEG may be T, in which case a DECOMPRESSOR is managed for the
 duration of the transformation.

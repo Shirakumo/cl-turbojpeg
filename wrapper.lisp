@@ -96,6 +96,47 @@
   (%set-property x-density)
   (%set-property y-density))
 
+(defmethod save-image ((path pathname) buffer width height (jpeg compressor) &key (pixel-format :rgb)
+                                                                                  (pitch 0)
+                                                                                  (bit-depth 8))
+  (let ((result (ecase bit-depth
+                  (8 (turbo:save-image (handle jpeg) (uiop:native-namestring path) buffer width pitch height pixel-format))
+                  (12 (turbo:save-image/12 (handle jpeg) (uiop:native-namestring path) buffer width pitch height pixel-format))
+                  (16 (turbo:save-image/16 (handle jpeg) (uiop:native-namestring path) buffer width pitch height pixel-format)))))
+    (test-error jpeg result)
+    path))
+
+(defmethod save-image (dst buffer width height (jpeg compressor) &key (pixel-format :rgb)
+                                                                      pitch
+                                                                      (bit-depth 8)
+                                                                      size)
+  (unless pitch
+    (setf pitch (* (turbo:pixel-size pixel-format) (width jpeg))))
+  (cffi:with-foreign-objects ((dst-ptr :pointer)
+                              (size-ptr :size))
+    (setf (cffi:mem-ref dst-ptr :pointer) (if dst dst (cffi:null-pointer)))
+    (setf (cffi:mem-ref size-ptr :size) (if dst size 0))
+    (let ((result (ecase bit-depth
+                    (8 (turbo:compress (handle jpeg) buffer width pitch height pixel-format dst-ptr size-ptr))
+                    (12 (turbo:compress/12 (handle jpeg) buffer width pitch height pixel-format dst-ptr size-ptr))
+                    (16 (turbo:compress/16 (handle jpeg) buffer width pitch height pixel-format dst-ptr size-ptr)))))
+      (test-error jpeg result)
+      (values (cffi:mem-aref dst-ptr :pointer)
+              (cffi:mem-aref size-ptr :size)))))
+
+(defmethod save-image ((destination vector) src width height (jpeg compressor) &rest args &key size &allow-other-keys)
+  (cffi:with-pointer-to-vector-data (ptr destination)
+    (apply #'save-image ptr src width height jpeg :size (or size (length source)) args)))
+
+(defmethod save-image (destination (source vector) width height (jpeg compressor) &rest args &key size &allow-other-keys)
+  (cffi:with-pointer-to-vector-data (ptr source)
+    (apply #'save-image destination source width height jpeg args)))
+
+(defmethod save-image (destination src width height (jpeg (eql T)) &rest args &key &allow-other-keys)
+  (let ((jpeg (make-instance 'compressor)))
+    (unwind-protect (apply #'save-image destination src width height jpeg args)
+      (free jpeg))))
+
 (defclass decompressor (jpeg)
   ())
 
@@ -124,6 +165,58 @@
 (define-property-wrapper decompressor width)
 (define-property-wrapper decompressor height)
 (define-property-wrapper decompressor precision)
+
+(defmethod load-image ((path pathname) (jpeg decompressor) &key pixel-format
+                                                                (alignment 1)
+                                                                (bit-depth 8))
+  (cffi:with-foreign-objects ((width :int)
+                              (height :int)
+                              (format :int))
+    (setf (cffi:mem-ref format 'turbo:pixel-format) (or pixel-format :unknown))
+    (let ((value (ecase bit-depth
+                   (8 (turbo:load-image (handle jpeg) (uiop:native-namestring path) width alignment height format))
+                   (12 (turbo:load-image/12 (handle jpeg) (uiop:native-namestring path) width alignment height format))
+                   (16 (turbo:load-image/16 (handle jpeg) (uiop:native-namestring path) width alignment height format)))))
+      (when (cffi:null-pointer-p value)
+        (report-error jpeg))
+      (values value
+              (cffi:mem-ref width :int)
+              (cffi:mem-ref height :int)
+              (cffi:mem-ref pixel-format 'turbo:pixel-format)
+              (* (turbo:pixel-size (cffi:mem-ref format 'turbo:pixel-format))
+                 (cffi:mem-ref width :int)
+                 (cffi:mem-ref height :int))))))
+
+(defmethod load-image (ptr (jpeg decompressor) &key (pixel-format :rgb)
+                                                    pitch
+                                                    (bit-depth 8)
+                                                    size
+                                                    buffer)
+  (check-type ptr cffi:foreign-pointer)
+  (check-error (turbo:decompress-header jpeg ptr size))
+  (unless pitch
+    (setf pitch (* (turbo:pixel-size pixel-format) (width jpeg))))
+  (unless buffer
+    (setf buffer (cffi:foreign-alloc :uint8 :count (* pitch (height jpeg)))))
+  (let ((result (ecase bit-depth
+                  (8 (turbo:decompress (handle jpeg) ptr size buffer pitch pixel-format))
+                  (12 (turbo:decompress/12 (handle jpeg) ptr size buffer pitch pixel-format))
+                  (16 (turbo:decompress/16 (handle jpeg) ptr size buffer pitch pixel-format)))))
+    (test-error jpeg result)
+    (values buffer
+            (width jpeg)
+            (height jpeg)
+            pixel-format
+            (* pitch (height jpeg)))))
+
+(defmethod load-image ((source vector) (jpeg decompressor) &rest args &key size &allow-other-keys)
+  (cffi:with-pointer-to-vector-data (ptr source)
+    (apply #'load-image ptr jpeg :size (or size (length source)) args)))
+
+(defmethod load-image (source (jpeg (eql T)) &rest args &key &allow-other-keys)
+  (let ((jpeg (make-instance 'decompressor)))
+    (unwind-protect (apply #'load-image source jpeg args)
+      (free jpeg))))
 
 (defclass transformer (jpeg)
   ())

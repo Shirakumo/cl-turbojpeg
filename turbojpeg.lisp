@@ -431,6 +431,7 @@
 (cffi:defcfun ("tj3SaveImage8" save-image) :pointer
   (handle :pointer)
   (filename :string)
+  (buffer :pointer)
   (width :pointer)
   (pitch :int)
   (height :pointer)
@@ -439,6 +440,7 @@
 (cffi:defcfun ("tj3SaveImage12" save-image/12) :pointer
   (handle :pointer)
   (filename :string)
+  (buffer :pointer)
   (width :pointer)
   (pitch :int)
   (height :pointer)
@@ -447,6 +449,7 @@
 (cffi:defcfun ("tj3SaveImage16" save-image/16) :pointer
   (handle :pointer)
   (filename :string)
+  (buffer :pointer)
   (width :pointer)
   (pitch :int)
   (height :pointer)

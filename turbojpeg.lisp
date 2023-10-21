@@ -458,5 +458,5 @@
 (cffi:defcfun ("tj3GetErrorStr" error-string) :string
   (handle :pointer))
 
-(cffi:defcfun ("tj3GetErrorCode" error-code) :int
+(cffi:defcfun ("tj3GetErrorCode" error-type) error-type
   (handle :pointer))

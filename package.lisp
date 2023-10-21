@@ -416,5 +416,6 @@
 (defpackage #:org.shirakumo.fraf.turbojpeg
   (:use #:cl)
   (:local-nicknames
-   (#:turbojpeg #:org.shirakumo.fraf.turbojpeg.cffi))
+   (#:turbo #:org.shirakumo.fraf.turbojpeg.cffi)
+   (#:jpeg #:org.shirakumo.fraf.jpeg.cffi))
   (:export))

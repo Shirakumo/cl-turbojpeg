@@ -12,7 +12,7 @@
               #+X86-64 "libturbojpeg-lin-amd64.so"))
   (:windows (:or #+X86 "libturbojpeg-win-i686.dll"
                  #+X86-64 "libturbojpeg-win-amd64.dll"))
-  (T (:or (:default "libturbojpeg") (:default "turbojpeg") (:default "libjpeg") (:default "jpeg"))))
+  (T (:or (:default "libturbojpeg") (:default "turbojpeg"))))
 
 
 (cffi:defcenum init-type

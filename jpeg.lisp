@@ -1,5 +1,19 @@
 (in-package #:org.shirakumo.fraf.jpeg.cffi)
 
+(defvar *here* #.(or *compile-file-pathname* *load-pathname* *default-pathname-defaults*))
+(defvar *static* (make-pathname :name NIL :type NIL :defaults (merge-pathnames "static/" *here*)))
+(pushnew *static* cffi:*foreign-library-directories*)
+
+(cffi:define-foreign-library libjpeg
+  (:darwin (:or #+X86 "libjpeg-mac-i686.dylib"
+                #+X86-64 "libjpeg-mac-amd64.dylib"
+                #+ARM64 "libjpeg-mac-arm64.dylib"))
+  (:unix (:or #+X86 "libjpeg-lin-i686.so"
+              #+X86-64 "libjpeg-lin-amd64.so"))
+  (:windows (:or #+X86 "libjpeg-win-i686.dll"
+                 #+X86-64 "libjpeg-win-amd64.dll"))
+  (T (:or (:default "libjpeg") (:default "jpeg"))))
+
 (defconstant DCT-SIZE 8)
 (defconstant DCT-SIZE-2 64)
 (defconstant QUANTIZATION-TABLES 4)

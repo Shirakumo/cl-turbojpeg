@@ -69,6 +69,7 @@
 (defpackage #:org.shirakumo.fraf.jpeg.cffi
   (:use #:cl)
   (:export
+   #:libjpeg
    #:dct-size
    #:dct-size-2
    #:quantization-tables

@@ -31,7 +31,7 @@ endif
 
 all:
 	mkdir -p build ../static
-	cmake -B build/ -DCMAKE_BUILD_TYPE=ReleaseWithDebug -DCMAKE_C_FLAGS="$(CFLAGS)" $(CMAKEFLAGS)
+	cmake -B build/ -DCMAKE_BUILD_TYPE=ReleaseWithDebug -DENABLE_STATIC=OFF -DREQUIRE_SIMD=ON -DWITH_JPEG8=ON -DCMAKE_C_FLAGS="$(CFLAGS)" $(CMAKEFLAGS)
 	$(MAKE) -C build
-	cp build/libjpeg.$(EXT) ../static/libjpeg-$(OS)-$(ARCH).$(EXT)
-	cp build/libturbojpeg.$(EXT) ../static/libturbojpeg-$(OS)-$(ARCH).$(EXT)
+	cp build/libjpeg*.$(EXT) ../static/libjpeg-$(OS)-$(ARCH).$(EXT)
+	cp build/libturbojpeg*.$(EXT) ../static/libturbojpeg-$(OS)-$(ARCH).$(EXT)

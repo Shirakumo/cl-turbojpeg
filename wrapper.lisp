@@ -9,6 +9,17 @@
 (define-condition jpeg-error (jpeg-condition error) ())
 (define-condition jpeg-warning (jpeg-condition warning) ())
 
+(defun init ()
+  (unless (cffi:foreign-library-loaded-p 'turbo:libturbojpeg)
+    (cffi:load-foreign-library 'turbo:libturbojpeg)))
+
+(defmethod free (ptr)
+  (check-type ptr cffi:foreign-pointer)
+  (turbo:free ptr))
+
+(defclass jpeg ()
+  ((handle :initarg :handle :initform NIL :accessor handle)))
+
 (defmethod report-error ((jpeg jpeg))
   (case (turbo:error-type (handle jpeg))
     (:warning (warn 'jpeg-warning :jpeg jpeg :message (turbo:error-string (handle jpeg))))
@@ -22,17 +33,6 @@
 (defmacro check-error (form)
   `(test-error ,(second form)
                (,(first form) (handle ,(second form)) ,@(cddr form))))
-
-(defun init ()
-  (unless (cffi:foreign-library-loaded-p 'turbo:libturbojpeg)
-    (cffi:load-foreign-library 'turbo:libturbojpeg)))
-
-(defmethod free (ptr)
-  (check-type ptr cffi:foreign-pointer)
-  (turbo:free ptr))
-
-(defclass jpeg ()
-  ((handle :initarg :handle :initform NIL :accessor handle)))
 
 (defmacro %set-boolean (name)
   `(when ,(intern (format NIL "~a-~a" name 'p))
@@ -61,9 +61,9 @@
   (%set-boolean progressive))
 
 (defmethod free ((jpeg jpeg))
-  (when (handle compressor)
-    (turbo:destroy (handle compressor))
-    (setf (handle compressor) NIL)))
+  (when (handle jpeg)
+    (turbo:destroy (handle jpeg))
+    (setf (handle jpeg) NIL)))
 
 (defmacro define-property-wrapper (class name &optional (value 'value) &body transform)
   (destructuring-bind (method &optional (property (intern (string method) "KEYWORD")))
@@ -131,11 +131,11 @@
 
 (defmethod save-image ((destination vector) src width height (jpeg compressor) &rest args &key size &allow-other-keys)
   (cffi:with-pointer-to-vector-data (ptr destination)
-    (apply #'save-image ptr src width height jpeg :size (or size (length source)) args)))
+    (apply #'save-image ptr src width height jpeg :size (or size (length destination)) args)))
 
-(defmethod save-image (destination (source vector) width height (jpeg compressor) &rest args &key size &allow-other-keys)
+(defmethod save-image (destination (source vector) width height (jpeg compressor) &rest args &key &allow-other-keys)
   (cffi:with-pointer-to-vector-data (ptr source)
-    (apply #'save-image destination source width height jpeg args)))
+    (apply #'save-image ptr source width height jpeg args)))
 
 (defmethod save-image (destination src width height (jpeg (eql T)) &rest args &key &allow-other-keys)
   (let ((jpeg (make-instance 'compressor)))

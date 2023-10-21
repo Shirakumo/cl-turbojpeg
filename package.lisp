@@ -31,6 +31,7 @@
    #:transform-options
    #:transform-data
    #:transform-custom-filter
+   #:make-handle
    #:set-parameter
    #:get-parameter
    #:compress
@@ -96,7 +97,7 @@
    #:component-info-component-index
    #:component-info-horizontal-sampling-factor
    #:component-info-vertical-sampling-factor
-   #:component-info-quantization-table
+   #:component-info-quantization-table-no
    #:component-info-dc-entropy-table
    #:component-info-ac-entropy-table
    #:component-info-width-in-blocks

@@ -78,7 +78,7 @@
   (component-index :int)
   (horizontal-sampling-factor :int)
   (vertical-sampling-factor :int)
-  (quantization-table :int)
+  (quantization-table-no :int)
   (dc-entropy-table :int)
   (ac-entropy-table :int)
   (width-in-blocks :uint)

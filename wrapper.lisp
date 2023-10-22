@@ -47,7 +47,8 @@
 
 (defmacro %set-boolean (name)
   `(when ,(intern (format NIL "~a-~a" name 'p))
-     (check-error (turbo:set-parameter jpeg ,(intern (string name) "KEYWORD") ,name))))
+     (check-error (turbo:set-parameter jpeg ,(intern (string name) "KEYWORD")
+                                       (if ,name 1 0)))))
 
 (defmacro %set-property (name &optional enum)
   `(when ,name
@@ -132,6 +133,7 @@
 
 (defmethod save-image ((destination vector) src width height (jpeg compressor) &rest args &key size &allow-other-keys)
   (cffi:with-pointer-to-vector-data (ptr destination)
+    (check-error (turbo:set-parameter jpeg :no-realloc 1))
     (apply #'save-image ptr src width height jpeg :size (or size (length destination)) args)))
 
 (defmethod save-image ((destination pathname) src width height (jpeg compressor) &rest args &key &allow-other-keys)
@@ -139,7 +141,7 @@
     (unwind-protect (%write-file jpeg buf size destination)
       (turbo:free buf))))
 
-(defmethod save-image ((source string) src width height (jpeg decompressor) &rest args &key &allow-other-keys)
+(defmethod save-image ((source string) src width height (jpeg compressor) &rest args &key &allow-other-keys)
   (apply #'save-image (pathname source) src width height jpeg args))
 
 (defmethod save-image (destination (source vector) width height (jpeg compressor) &rest args &key &allow-other-keys)
@@ -292,6 +294,7 @@
 
 (defmethod transform-image (source (destination vector) operation (jpeg transformer) &rest args &key destination-size &allow-other-keys)
   (cffi:with-pointer-to-vector-data (ptr source)
+    (check-error (turbo:set-parameter jpeg :no-realloc 1))
     (apply #'transform-image source ptr operation jpeg :destination-size (or destination-size (length source)) args)))
 
 (defmethod transform-image (source (destination pathname) operation (jpeg transformer) &rest args &key &allow-other-keys)

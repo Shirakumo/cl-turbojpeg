@@ -139,6 +139,9 @@
     (unwind-protect (%write-file jpeg buf size destination)
       (turbo:free buf))))
 
+(defmethod save-image ((source string) src width height (jpeg decompressor) &rest args &key &allow-other-keys)
+  (apply #'save-image (pathname source) src width height jpeg args))
+
 (defmethod save-image (destination (source vector) width height (jpeg compressor) &rest args &key &allow-other-keys)
   (cffi:with-pointer-to-vector-data (ptr source)
     (apply #'save-image ptr source width height jpeg args)))
@@ -224,6 +227,9 @@
       (read-sequence vec stream))
     (apply #'load-image vec jpeg args)))
 
+(defmethod load-image ((source string) (jpeg decompressor) &rest args &key &allow-other-keys)
+  (apply #'load-image (pathname source) jpeg args))
+
 (defmethod load-image ((source vector) (jpeg decompressor) &rest args &key size &allow-other-keys)
   (cffi:with-pointer-to-vector-data (ptr source)
     (apply #'load-image ptr jpeg :size (or size (length source)) args)))
@@ -293,12 +299,18 @@
     (unwind-protect (%write-file jpeg buf size destination)
       (turbo:free buf))))
 
+(defmethod transform-image (source (destination string) operation (jpeg decompressor) &rest args &key &allow-other-keys)
+  (apply #'transform-image source (pathname destination) operation jpeg args))
+
 (defmethod transform-image ((source pathname) destination operation (jpeg transformer) &rest args &key &allow-other-keys)
   (let (vec)
     (with-open-file (stream source :element-type '(unsigned-byte 8))
       (setf vec (make-array (file-length stream) :element-type '(unsigned-byte 8)))
       (read-sequence vec stream))
     (apply #'transform-image vec destination operation jpeg args)))
+
+(defmethod transform-image ((source string) destination operation (jpeg decompressor) &rest args &key &allow-other-keys)
+  (apply #'transform-image (pathname source) destination operation jpeg args))
 
 (defmethod transform-image (source destination operation (jpeg (eql T)) &rest args &key &allow-other-keys)
   (let ((jpeg (make-instance 'transformer)))

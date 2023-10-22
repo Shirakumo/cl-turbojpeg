@@ -14,4 +14,6 @@ For finer control you can create the respective ``decompressor``, ``compressor``
 
 The library supports pathnames, vectors, and pointers for source and destination. When passing vectors, it uses ``cffi:with-pointer-to-vector-data`` to access the contents, so please see the respective documentation for restrictions thereof.
 
+For faster file operations you may want to consider using the "mmap"(https://github.com/shinmera/mmap) in conjunction, to avoid having to manually copy the file into memory first like this library does by itself.
+
 You can also directly access the underlying jpeg-turbo C API via the ``org.shirakumo.fraf.turbojpeg.cffi`` package, and the simulated libjpeg API via the ``org.shirakumo.fraf.jpeg.cffi`` package. In the latter case you'll have to first ensure you load the ``org.shirakumo.fraf.jpeg.cffi:libjpeg`` library before using it.

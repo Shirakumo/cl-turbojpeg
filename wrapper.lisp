@@ -17,6 +17,17 @@
   (check-type ptr cffi:foreign-pointer)
   (turbo:free ptr))
 
+(defun %write-file (jpeg buf size path)
+  (let ((file (cffi:foreign-funcall "fopen" :string (uiop:native-namestring path) :string "wb" :pointer)))
+    (unwind-protect
+         (progn
+           (when (cffi:null-pointer-p file)
+             (error 'jpeg-error :jpeg jpeg :message "Failed to open file to write to."))
+           (when (< (cffi:foreign-funcall "fwrite" :pointer buf :size size :size 1 :pointer file :int) 1)
+             (error 'jpeg-error :jpeg jpeg :message "Failed to write to file."))
+           destination)
+      (cffi:foreign-funcall "fclose" :pointer file :int))))
+
 (defclass jpeg ()
   ((handle :initarg :handle :initform NIL :accessor handle)))
 
@@ -101,16 +112,6 @@
   (%set-property x-density)
   (%set-property y-density))
 
-(defmethod save-image ((path pathname) buffer width height (jpeg compressor) &key (pixel-format :rgb)
-                                                                                  (pitch 0)
-                                                                                  (bit-depth 8))
-  (let ((result (ecase bit-depth
-                  (8 (turbo:save-image (handle jpeg) (uiop:native-namestring path) buffer width pitch height pixel-format))
-                  (12 (turbo:save-image/12 (handle jpeg) (uiop:native-namestring path) buffer width pitch height pixel-format))
-                  (16 (turbo:save-image/16 (handle jpeg) (uiop:native-namestring path) buffer width pitch height pixel-format)))))
-    (test-error jpeg result)
-    path))
-
 (defmethod save-image (dst buffer width height (jpeg compressor) &key (pixel-format :rgb)
                                                                       pitch
                                                                       (bit-depth 8)
@@ -132,6 +133,11 @@
 (defmethod save-image ((destination vector) src width height (jpeg compressor) &rest args &key size &allow-other-keys)
   (cffi:with-pointer-to-vector-data (ptr destination)
     (apply #'save-image ptr src width height jpeg :size (or size (length destination)) args)))
+
+(defmethod save-image ((destination pathname) src width height (jpeg compressor) &rest args &key &allow-other-keys)
+  (multiple-value-bind (buf size) (apply #'save-image NIL src width height jpeg args)
+    (unwind-protect (%write-file jpeg buf size destination)
+      (turbo:free buf))))
 
 (defmethod save-image (destination (source vector) width height (jpeg compressor) &rest args &key &allow-other-keys)
   (cffi:with-pointer-to-vector-data (ptr source)
@@ -170,47 +176,6 @@
 (define-property-wrapper decompressor width)
 (define-property-wrapper decompressor height)
 (define-property-wrapper decompressor precision)
-
-(defmethod load-image ((path pathname) (jpeg decompressor) &key pixel-format
-                                                                (alignment 1)
-                                                                (bit-depth 8)
-                                                                buffer)
-  (cffi:with-foreign-objects ((width :int)
-                              (height :int)
-                              (format :int))
-    (setf (cffi:mem-ref format 'turbo:pixel-format) (or pixel-format :unknown))
-    (let ((value (ecase bit-depth
-                   (8 (turbo:load-image (handle jpeg) (uiop:native-namestring path) width alignment height format))
-                   (12 (turbo:load-image/12 (handle jpeg) (uiop:native-namestring path) width alignment height format))
-                   (16 (turbo:load-image/16 (handle jpeg) (uiop:native-namestring path) width alignment height format)))))
-      (when (cffi:null-pointer-p value)
-        (report-error jpeg))
-      (let ((width (cffi:mem-ref width :int))
-            (height (cffi:mem-ref height :int))
-            (pixel-format (cffi:mem-ref pixel-format 'turbo:pixel-format))
-            (buffer-size (* (turbo:pixel-size (cffi:mem-ref format 'turbo:pixel-format))
-                            (cffi:mem-ref width :int)
-                            (cffi:mem-ref height :int))))
-        (labels ((transfer/ptr (buffer)
-                   (cffi:foreign-funcall "memcpy" :pointer buffer :pointer value :size buffer-size :pointer)
-                   (turbo:free value)
-                   (values buffer width height pixel-format buffer-size))
-                 (transfer/vec (vec)
-                   (cffi:with-pointer-to-vector-data (ptr vec)
-                     (cffi:foreign-funcall "memcpy" :pointer ptr :pointer value :size buffer-size :pointer)
-                     (turbo:free value)
-                     (values vec width height pixel-format buffer-size))))
-          (etypecase buffer
-            (null
-             (values value width height pixel-format buffer-size))
-            (cffi:foreign-pointer
-             (transfer/ptr buffer))
-            (vector
-             (transfer/vec buffer))
-            ((eql :vector)
-             (transfer/vec (ecase bit-depth
-                             (8 (make-array buffer-size :element-type '(unsigned-byte 8)))
-                             (16 (make-array buffer-size :element-type '(unsigned-byte 16))))))))))))
 
 (defmethod load-image (ptr (jpeg decompressor) &key (pixel-format :rgb)
                                                     pitch
@@ -251,6 +216,13 @@
          (load-image/vec (ecase bit-depth
                            (8 (make-array buffer-size :element-type '(unsigned-byte 8)))
                            (16 (make-array buffer-size :element-type '(unsigned-byte 16))))))))))
+
+(defmethod load-image ((source pathname) (jpeg decompressor) &rest args &key &allow-other-keys)
+  (let (vec)
+    (with-open-file (stream source :element-type '(unsigned-byte 8))
+      (setf vec (make-array (file-length stream) :element-type '(unsigned-byte 8)))
+      (read-sequence vec stream))
+    (apply #'load-image vec jpeg args)))
 
 (defmethod load-image ((source vector) (jpeg decompressor) &rest args &key size &allow-other-keys)
   (cffi:with-pointer-to-vector-data (ptr source)
@@ -318,17 +290,7 @@
 
 (defmethod transform-image (source (destination pathname) operation (jpeg transformer) &rest args &key &allow-other-keys)
   (multiple-value-bind (buf size) (apply #'transform-image source NIL operation jpeg args)
-    (unwind-protect
-         ;; Use C functions to avoid having to copy the memory buffer to a vector for output.
-         (let ((file (cffi:foreign-funcall "fopen" :string (uiop:native-namestring destination) :string "wb" :pointer)))
-           (unwind-protect
-                (progn
-                  (when (cffi:null-pointer-p file)
-                    (error 'jpeg-error :jpeg jpeg :message "Failed to open file to write to."))
-                  (when (< (cffi:foreign-funcall "fwrite" :pointer buf :size size :size 1 :pointer file :int) 1)
-                    (error 'jpeg-error :jpeg jpeg :message "Failed to write to file."))
-                  destination)
-             (cffi:foreign-funcall "fclose" :pointer file :int)))
+    (unwind-protect (%write-file jpeg buf size destination)
       (turbo:free buf))))
 
 (defmethod transform-image ((source pathname) destination operation (jpeg transformer) &rest args &key &allow-other-keys)

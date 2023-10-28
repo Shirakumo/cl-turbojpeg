@@ -153,6 +153,11 @@
     (unwind-protect (apply #'save-image destination src width height jpeg args)
       (free jpeg))))
 
+(defmacro with-compressor ((name &rest args) &body body)
+  `(let ((,name (make-instance 'compressor ,@args)))
+     (unwind-protect (let ((,name ,name)) ,@body)
+       (free ,name))))
+
 (defclass decompressor (jpeg)
   ())
 
@@ -241,6 +246,11 @@
     (unwind-protect (apply #'load-image source jpeg args)
       (free jpeg))))
 
+(defmacro with-decompressor ((name &rest args) &body body)
+  `(let ((,name (make-instance 'decompressor ,@args)))
+     (unwind-protect (let ((,name ,name)) ,@body)
+       (free ,name))))
+
 (defclass transformer (jpeg)
   ())
 
@@ -319,3 +329,8 @@
   (let ((jpeg (make-instance 'transformer)))
     (unwind-protect (apply #'transform-image source destination operation jpeg args)
       (free jpeg))))
+
+(defmacro with-transformer ((name &rest args) &body body)
+  `(let ((,name (make-instance 'transformer ,@args)))
+     (unwind-protect (let ((,name ,name)) ,@body)
+       (free ,name))))

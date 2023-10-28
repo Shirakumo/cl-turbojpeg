@@ -429,7 +429,10 @@
    #:free
    #:compressor
    #:save-image
+   #:with-compressor
    #:decompressor
    #:load-image
+   #:with-decompressor
    #:transformer
-   #:transform-image))
+   #:transform-image
+   #:with-transformer))

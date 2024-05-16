@@ -25,7 +25,7 @@
              (error 'jpeg-error :jpeg jpeg :message "Failed to open file to write to."))
            (when (< (cffi:foreign-funcall "fwrite" :pointer buf :size size :size 1 :pointer file :int) 1)
              (error 'jpeg-error :jpeg jpeg :message "Failed to write to file."))
-           destination)
+           path)
       (cffi:foreign-funcall "fclose" :pointer file :int))))
 
 (defclass jpeg ()

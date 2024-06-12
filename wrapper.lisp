@@ -46,7 +46,7 @@
                (,(first form) (handle ,(second form)) ,@(cddr form))))
 
 (defmacro %set-boolean (name)
-  `(when ,(intern (format NIL "~a-~a" name 'p))
+  `(when ,(intern (format NIL "~a-~a" (string name) (string 'p)))
      (check-error (turbo:set-parameter jpeg ,(intern (string name) "KEYWORD")
                                        (if ,name 1 0)))))
 

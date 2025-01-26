@@ -18,7 +18,7 @@
   (turbo:free ptr))
 
 (defun %write-file (jpeg buf size path)
-  (let ((file (cffi:foreign-funcall "fopen" :string (uiop:native-namestring path) :string "wb" :pointer)))
+  (let ((file (cffi:foreign-funcall "fopen" :string (pathname-utils:native-namestring path) :string "wb" :pointer)))
     (unwind-protect
          (progn
            (when (cffi:null-pointer-p file)

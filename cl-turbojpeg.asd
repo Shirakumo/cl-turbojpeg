@@ -14,4 +14,5 @@
                (:file "wrapper")
                (:file "documentation"))
   :depends-on (:documentation-utils
+               :pathname-utils
                :cffi))

@@ -14,14 +14,15 @@
                  #+X86-64 "libjpeg-win-amd64.dll"))
   (T (:or (:default "libjpeg") (:default "jpeg"))))
 
-(defconstant DCT-SIZE 8)
-(defconstant DCT-SIZE-2 64)
-(defconstant QUANTIZATION-TABLES 4)
-(defconstant HUFFMAN-TABLES 4)
-(defconstant ARITH-CODING-TABLES 18)
-(defconstant MAX-SCAN-COMPONENTS 4)
-(defconstant MAX-SAMPLING-FACTOR 4)
-(defconstant MAX-BLOCKS-IN-MCU 10)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defconstant DCT-SIZE 8)
+  (defconstant DCT-SIZE-2 64)
+  (defconstant QUANTIZATION-TABLES 4)
+  (defconstant HUFFMAN-TABLES 4)
+  (defconstant ARITH-CODING-TABLES 18)
+  (defconstant MAX-SCAN-COMPONENTS 4)
+  (defconstant MAX-SAMPLING-FACTOR 4)
+  (defconstant MAX-BLOCKS-IN-MCU 10))
 
 (cffi:defcenum color-space
   :unknown

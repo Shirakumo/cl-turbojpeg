@@ -5,6 +5,12 @@
 (pushnew *static* cffi:*foreign-library-directories*)
 
 (cffi:define-foreign-library libjpeg
+    (:android
+     (:or "libjpeg.so"
+          #+X86 "libjpeg-android-i686.so"
+          #+X86-64 "libjpeg-android-amd64.so"
+          #+ARM64 "libjpeg-android-arm64.so"
+          #+(and ARM (not ARM64)) "libjpeg-android-arm7a.so"))
   (:darwin (:or #+X86 "libjpeg-mac-i686.dylib"
                 #+X86-64 "libjpeg-mac-amd64.dylib"
                 #+ARM64 "libjpeg-mac-arm64.dylib"))

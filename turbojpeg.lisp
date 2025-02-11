@@ -5,6 +5,12 @@
 (pushnew *static* cffi:*foreign-library-directories*)
 
 (cffi:define-foreign-library libturbojpeg
+  (:android
+   (:or "libturbojpeg.so"
+        #+X86 "libturbojpeg-android-i686.so"
+        #+X86-64 "libturbojpeg-android-amd64.so"
+        #+ARM64 "libturbojpeg-android-arm64.so"
+        #+(and ARM (not ARM64)) "libturbojpeg-android-arm7a.so"))
   (:darwin (:or #+X86 "libturbojpeg-mac-i686.dylib"
                 #+X86-64 "libturbojpeg-mac-amd64.dylib"
                 #+ARM64 "libturbojpeg-mac-arm64.dylib"))

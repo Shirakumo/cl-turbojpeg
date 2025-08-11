@@ -4,9 +4,9 @@
   :author "Yukari Hafner <shinmera@tymoon.eu>"
   :maintainer "Yukari Hafner <shinmera@tymoon.eu>"
   :description "An up-to-date bindings library for the JPEG Turbo C library"
-  :homepage "https://shirakumo.github.io/cl-turbojpeg/"
-  :bug-tracker "https://github.com/shirakumo/cl-turbojpeg/issues"
-  :source-control (:git "https://github.com/shirakumo/cl-turbojpeg.git")
+  :homepage "https://shirakumo.org/docs/cl-turbojpeg/"
+  :bug-tracker "https://shirakumo.org/project/cl-turbojpeg/issues"
+  :source-control (:git "https://shirakumo.org/project/cl-turbojpeg.git")
   :serial T
   :components ((:file "package")
                (:file "turbojpeg")
